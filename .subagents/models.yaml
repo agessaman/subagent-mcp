@@ -29,6 +29,8 @@ models:
     - name: claude-haiku-4-5-20251001
       description: Fast and cheap for narrow, well-scoped tasks
   codex:
+    - name: gpt-6.1-sol
+      description: Latest Codex workhorse model; used for code reviews.
     - name: gpt-5.6-sol
       description: Codex CLI default model
     - name: gpt-5.6-luna
@@ -42,10 +44,14 @@ models:
       description: >-
         OpenCode model IDs are "provider/model" (matching config/providers). Run
         `opencode models` to see what's configured locally, then add entries here.
-    # Mistral API models (pay-as-you-go) after connecting Mistral in OpenCode; `opencode models`
-    # lists the `mistral/...` ids your key can run. Limit them with `providerLimits.mistral`. E.g.:
-    # - name: mistral/mistral-medium-latest
-    # - name: mistral/codestral-latest
+    - name: opencode-go/deepseek-v4.1-flash
+      description: DeepSeek V4.1 Flash via OpenCode Go; fast, cheap second-opinion reviewer.
+    # Mistral API models (pay-as-you-go) through OpenCode; `opencode models` lists the `mistral/...`
+    # ids your key can run. Limit them with `providerLimits.mistral`.
+    - name: mistral/deepseek-v4-1-flash-1017
+      description: DeepSeek V4.1 Flash hosted by Mistral (Mistral API, pay-as-you-go).
+    - name: mistral/codestral-latest
+      description: Codestral via the Mistral API (pay-as-you-go); cheap code-focused model.
   antigravity:
     - name: gemini-3.8-flash-low
       description: Fast, low-effort Gemini 3.8 Flash tier from `agy models`.
@@ -58,6 +64,10 @@ models:
     # `auto` is the CLI default; effort is folded into the id (e.g. grok-4.7-high).
     - name: auto
       description: Cursor Agent CLI default model routing (`agent --list-models` for the full roster).
+    - name: grok-4.7-high
+      description: Grok 4.7 at high effort.
+    - name: grok-4.7-xhigh
+      description: Grok 4.7 at extra-high effort; thorough reviewer.
   copilot:
     # GitHub Copilot CLI model ids as `copilot --model` accepts them. Which ones run depends on your
     # Copilot plan and model settings; `auto` routes to a model your plan allows.
