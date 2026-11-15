@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 import { snapshotOf, transitions } from './hooks/notes'
 import { activityOf, splitDiff } from './hooks/panel'
@@ -316,7 +316,15 @@ test('v shows the selected agent\'s worktree diff one file at a time, and b goes
   expect(await ui.find({ type: 'Text', text: /new\.txt \(2\/2\)/ })).toBeTruthy()
   await ui.press({ key: 'diff-back' })
   expect(await ui.find({ key: 'agent-id-Ada' })).toBeTruthy()
+
+  // Left open on a diff, the pane reopens on the list.
+  await ui.press({ key: 'diff' })
   await ui.unmount()
+  await $.command.run({ command: 'subagent-mcp', args: '' })
+  const again = await $.ui.mount(PANE)
+  expect(await again.find({ key: 'agent-id-Ada' })).toBeTruthy()
+  expect(await again.find({ key: 'diff-back' })).toBeFalsy()
+  await again.unmount()
 })
 
 test('no diff key for an agent without a worktree', async ($, on) => {
@@ -396,4 +404,34 @@ test('splitDiff and activityOf', () => {
   expect(activityOf({ ...base, state: 'running', phase: 'tool', activity: 'read a.ts' })).toBe('read a.ts')
   expect(activityOf({ ...base, state: 'running', phase: 'thinking' })).toBe('thinking')
   expect(activityOf({ ...base, state: 'needs_approval', phase: 'approval' })).toBe('waiting for approval')
+})
+
+test('the digest is fetched again when the selected agent settles, then left alone', async ($, on) => {
+  const clock = mock.clock(on)
+  let state = 'running'
+  const digests: string[] = []
+  on('mcp.call', (_, e) => {
+    if (e.tool === 'get_agent_events') digests.push(state)
+    const body =
+      e.tool === 'get_dashboard' ? { revision: state, agents: [agent({ name: 'Ada', state })], ensembles: [] }
+      : e.tool === 'get_agent_events' ? { name: 'Ada', state, latest_message: state === 'running' ? 'working on it' : 'all done' }
+      : {}
+    return { value: { content: [{ type: 'text', text: JSON.stringify(body) }], structuredContent: body } }
+  })
+  on('command.register', () => ({ value: { command: 'subagent-mcp' } }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('fs.read', () => ({ value: '{}' }))
+  await open($)
+
+  const ui = await $.ui.mount(PANE)
+  expect(await ui.find({ type: 'Text', text: /working on it/ })).toBeTruthy()
+  state = 'completed'
+  await clock.advance(2000)
+  expect(await ui.find({ type: 'Text', text: /all done/ })).toBeTruthy()
+  const settled = digests.filter(d => d === 'completed').length
+  await clock.advance(2000)
+  await clock.advance(2000)
+  expect(digests.filter(d => d === 'completed').length).toBe(settled)
+  await ui.unmount()
 })
